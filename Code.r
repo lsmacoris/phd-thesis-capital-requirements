@@ -4,7 +4,6 @@
 ###################################################
 
 ###################################################
-
 # Loading Libraries ####
 library(dplyr)
 library(tidyr)
@@ -169,11 +168,11 @@ for(i in 4:9){
   #2.5 Cleaning up
   is.na(Data[,3:103]) <- !Data[,3:103]
   Data$DATA <- as.Date(Data$DATA, format = "%d/%m/%Y")
-
+  
   
   Financials_2013_2019<-rbind(Financials_2013_2019,Data)
   
-  }
+}
 
 ###################################################
 
@@ -195,13 +194,13 @@ Names=data.frame(Index=NA,Desc=NA)
 
 #2.1.3 Do a loop to search for the correspondent names
 for (i in 3:96){
-
+  
   Corresp=data.frame(Index=NA,
                      Desc=NA)
   
   Corresp$Index=names(Financials_2010_2012)[i]
   Corresp$Desc=N2010_2012[N2010_2012$Y2010_2012==Corresp$Index,1]
-
+  
   Names=rbind(Names,Corresp)
   
 }
@@ -292,7 +291,7 @@ OPS<-OPS%>%
     Result_Op=sum(Rec_Op,-Custo_Assistencial,-Outras_Desp_Op,-Despesas_Gerais,-IR_CSLL,na.rm=TRUE),
     Result_FinPatr=sum(`35`,`36`,-`45`,-`47`,na.rm=TRUE),
     DA=mean(sum(`4637`,`4638`,na.rm=TRUE)),
-
+    
     #Main Financial Indicators#
     
     ## Indicadores de Resultado
@@ -389,7 +388,7 @@ Solvency<-Solvency%>%
   mutate(
     #S1: 20% x (100% x RevPre + 50% x RevPos)
     S1=0.2*sum(Rev_Pre,0.5*Rev_Pos,na.rm=TRUE))%>%
-    #S2: To calculate S2, we must calculate rolling averages for pre and post costs 
+  #S2: To calculate S2, we must calculate rolling averages for pre and post costs 
   arrange(REG_ANS,Year)%>%
   group_by(REG_ANS)%>%
   mutate(Costs_Pre_Mean=rollapply(Cost_Pre,width=3,FUN='mean',partial=1,align = 'right'),
@@ -411,7 +410,7 @@ State_Shares<-readRDS('Final Datasets\\State_Shares.RData')
 
 #6.2 Now, we'll merge the solvency information with the financials
 Baseline_Data<-OPS%>%mutate(REG_ANS=as.character(REG_ANS),
-                     Year=as.character(year(DATA)))
+                            Year=as.character(year(DATA)))
 
 #6.3 Aggregate all customers at the national level for each firm
 NationalBenefs<-State_Shares%>%
@@ -422,7 +421,7 @@ NationalBenefs<-State_Shares%>%
 
 Baseline_Data<-Baseline_Data%>%
   left_join(NationalBenefs)%>%
-#Lets consider only firms in which we have all year between min and max years 
+  #Lets consider only firms in which we have all year between min and max years 
   group_by(REG_ANS)%>%
   mutate(Length=max(as.numeric(Year)-min(as.numeric(Year))+1),
          Min_Year=min(as.numeric(Year)),
@@ -456,7 +455,7 @@ Adj_Equity$REG_ANS<-as.character(Adj_Equity$REG_ANS)
 
 Adj_Equity<-Adj_Equity%>%
   left_join(dplyr::filter(Solvency,year(DATA)=='2009')%>%
-  mutate(REG_ANS=as.character(REG_ANS)))%>%
+              mutate(REG_ANS=as.character(REG_ANS)))%>%
   filter(!is.na(S1),!is.na(S2))%>%
   rowwise()%>%
   mutate(SM=max(S1,S2,na.rm = TRUE))%>%
@@ -528,38 +527,36 @@ SurvPlot<-left_join(Active,Survival)%>%
 
 #Plot number of firms
 F1<-ggplot(SurvPlot,aes(x=Year,y=Active))+
-    geom_col(alpha=0.5)+
-    scale_colour_grey()+
-    theme_minimal()+
-    geom_label(aes(label=Active))+
-    scale_x_continuous(breaks=seq(2000,2019,1))+
-    scale_y_continuous(breaks=seq(0,2000,250))+
-    theme(axis.text = element_text(size=15))+
-    theme(axis.text.x = element_text(angle = 90))+
-    theme(plot.title = element_text(face='bold',size=20))+
-    labs(x='',
-         y='Number of active Healthcare Firms',
-         title='Panel A: Evolution of Active Healthcare Firms over time')
+  geom_col(alpha=0.5)+
+  scale_colour_grey()+
+  theme_minimal()+
+  geom_label(aes(label=Active))+
+  scale_x_continuous(breaks=seq(2000,2019,1))+
+  scale_y_continuous(breaks=seq(0,2000,250))+
+  theme(axis.text = element_text(size=15))+
+  theme(axis.text.x = element_text(angle = 90))+
+  theme(plot.title = element_text(face='bold',size=20))+
+  labs(x='',
+       y='Number of active Healthcare Firms',
+       title='Panel A: Evolution of Active Healthcare Firms over time')
 
 #Plot number of delisted
 F2<-ggplot(SurvPlot,aes(x=Year,y=Delisted))+
-    geom_col(alpha=0.5)+
-    geom_smooth(method = 'lm',se=FALSE,linetype='dashed')+
-    scale_colour_grey()+
-    theme_minimal()+
-    geom_label(aes(label=ifelse(!is.na(Perc_Delisted),paste0(round(Perc_Delisted*100,1),"%"),"-")))+
-    scale_x_continuous(breaks=seq(2000,2019,1))+
-    scale_y_continuous(breaks=seq(0,150,25))+
-    theme(axis.text = element_text(size=15))+
-    theme(axis.text.x = element_text(angle = 90))+
-    theme(plot.title = element_text(face='bold',size=20))+
-    labs(x='',
-         y='Number of delisted Healthcare Firms',
-         title='Panel B: Evolution of delistings and mortality rates over time',
-         subtitle='Mortality rates, presented in boxes, are conditional on being active in the last year.')
+  geom_col(alpha=0.5)+
+  geom_smooth(method = 'lm',se=FALSE,linetype='dashed')+
+  scale_colour_grey()+
+  theme_minimal()+
+  geom_label(aes(label=ifelse(!is.na(Perc_Delisted),paste0(round(Perc_Delisted*100,1),"%"),"-")))+
+  scale_x_continuous(breaks=seq(2000,2019,1))+
+  scale_y_continuous(breaks=seq(0,150,25))+
+  theme(axis.text = element_text(size=15))+
+  theme(axis.text.x = element_text(angle = 90))+
+  theme(plot.title = element_text(face='bold',size=20))+
+  labs(x='',
+       y='Number of delisted Healthcare Firms',
+       title='Panel B: Evolution of delistings and mortality rates over time',
+       subtitle='Mortality rates, presented in boxes, are conditional on being active in the last year.')
 
-
-# PDF graphics device
 out.path=paste0(fig_path,"F1.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F1,F2,nrow=2, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
@@ -603,7 +600,6 @@ F4=ggplot(Age,aes(x=Year,y=Age))+
        title='Panel B: Average Customer Age over time',
        subtitle='Weighted average of 18 bins of ~5 years, capped at 80+. This is a lower bound for the average customer age.')
 
-# PDF graphics device
 out.path=paste0(fig_path,"F2.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F3,F4,nrow=2, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
@@ -635,7 +631,6 @@ F6=Hazard%>%
        title='Average Hazard Ratio (1 - Gross Margin) over time',
        subtitle='Based on the average values for the Hazard Ratio of Health Cooperatives, Filantrophy, Medical-Assistance Firms.')
 
-# PDF graphics device
 out.path=paste0(fig_path,"F3.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F6,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
@@ -643,7 +638,6 @@ dev.off()
 
 
 #Leverage Over time: use treatment levels here.
-
 Leverage<-Baseline_Data%>%
   group_by(Year)%>%
   summarize(Leverage=median(Ativo_Total/PL,na.rm=TRUE),
@@ -684,7 +678,6 @@ F8=Leverage%>%ggplot(aes(x=Year,y=AV_Perc))+
        title='Panel B: Evolution of Financial Buffers before/after the rule',
        subtitle='Based on the median values of our subsample')
 
-# PDF graphics device
 out.path=paste0(fig_path,"F4.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F7,F8,nrow=2, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
@@ -692,25 +685,33 @@ dev.off()
 
 
 F9<-Leverage%>%ggplot(aes(x=Year,y=AV/1000000000))+
-    geom_col(alpha=0.5)+
-    scale_colour_grey()+
-    theme_minimal()+
-    geom_label(label=paste0("R$ ",round(Leverage$AV/1000000000,1),"bi"))+
-    scale_y_continuous(breaks=seq(0,30,2.5))+
-    geom_vline(xintercept=2,linetype='dashed')+
-    theme(axis.text = element_text(size=15))+
-    theme(axis.text.x = element_text(angle = 90))+
-    theme(plot.title = element_text(face='bold',size=20))+
-    labs(x='',
-         y='Financial Assets (in billions of BRL)',
-         title='Evolution of Financial Assets before/after the rule',
-         subtitle='Total value per year based on our subsample.')
-  
+  geom_col(alpha=0.5)+
+  scale_colour_grey()+
+  theme_minimal()+
+  geom_label(label=paste0("R$ ",round(Leverage$AV/1000000000,1),"bi"))+
+  scale_y_continuous(breaks=seq(0,30,2.5))+
+  geom_vline(xintercept=2,linetype='dashed')+
+  theme(axis.text = element_text(size=15))+
+  theme(axis.text.x = element_text(angle = 90))+
+  theme(plot.title = element_text(face='bold',size=20))+
+  labs(x='',
+       y='Financial Assets (in billions of BRL)',
+       title='Evolution of Financial Assets before/after the rule',
+       subtitle='Total value per year based on our subsample.')
 
-# PDF graphics device
+
 out.path=paste0(fig_path,"F5.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F9,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
+dev.off()
+
+#Number of breaches per year
+
+
+
+out.path=paste0(fig_path,"F4.pdf")
+pdf(out.path, height = 20, width =30, paper = "USr")
+print(grid.arrange(F7,F8,nrow=2, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
 
 ###################################################
@@ -755,8 +756,8 @@ Panel<-Panel%>%left_join(State_CAGED)%>%ungroup()%>%distinct()
 #7.1.3 Joining Categorical Data
 Panel<-Panel%>%
   left_join(dplyr::select(Cat,Registro_ANS,UF,Modalidade,Ativa,Data_Descredenciamento,Motivo_do_Descredenciamento)%>%
-  mutate(UF_Home=UF,REG_ANS=as.character(Registro_ANS))%>%
-  dplyr::select(-UF))
+              mutate(UF_Home=UF,REG_ANS=as.character(Registro_ANS))%>%
+              dplyr::select(-UF))
 
 #7.1.4 Joining Complaints Data
 Complaints<-readRDS('Final Datasets\\Complaints.RDS')
@@ -780,19 +781,22 @@ Regression<-Panel%>%ungroup()%>%
   arrange(REG_ANS,UF,Year)%>%
   group_by(REG_ANS,UF)%>%
   mutate(O_State_Benef=dplyr::lead(log(State_Benef),1),
-         O_Complaints=dplyr::lead(log(1+Complaints),1),
          O_Share=dplyr::lead(Share,1),
          O_OpAssets=dplyr::lead(log(Ativo_Operacional),1),
-         O_PPE=dplyr::lead(log(PPE),1))%>%
+         O_FinAssets=dplyr::lead(log(Ativo_Financeiro),1),
+         O_Assets=dplyr::lead(log(Ativo_Total),1),
+         O_OpRevenue=dplyr::lead(log(Rec_Op),1),
+         O_EBITDA=dplyr::lead(log(EBITDA),1),
+         O_Hazard=dplyr::lead(Sinistralidade,1))%>%
   ungroup()%>%
   #Create categorical variables
   mutate(
-         REG_ANS=as.character(REG_ANS),
-         Year=as.character(Year),
-         Home=ifelse(UF==UF_Home,1,0),
-         Coop=ifelse(Modalidade=='Cooperativa Médica',1,0),
-         Post=ifelse(as.numeric(Year)>=2012,1,0),
-         Size=log(Ativo_Total))%>%
+    REG_ANS=as.character(REG_ANS),
+    Year=as.character(Year),
+    Home=ifelse(UF==UF_Home,1,0),
+    Coop=ifelse(Modalidade=='Cooperativa Médica',1,0),
+    Post=ifelse(as.numeric(Year)>=2012,1,0),
+    Size=log(Ativo_Total))%>%
   #Create Year Fixed Dummys for Dynamic Effects: Baseline is 2012
   mutate(Y_2010=ifelse(Year=='2010',1,0),
          Y_2011=ifelse(Year=='2011',1,0),
@@ -847,23 +851,99 @@ SummaryStats[,1]<-c('Customers','EBITDA (%)','YoY Growth in Customers',
 kable(SummaryStats,format='latex')%>%save_kable(paste0(table_path,'T1.tex'))
 
 #Save
-saveRDS(Regression,'Final Datasets\\Regression Sample.RDS')
+#saveRDS(Regression,'Final Datasets\\Regression Sample.RDS')
 
-#7.2 Regressions [CLICK HERE TO JUMP] ####
-
+#7.2 Final Regression data [CLICK HERE TO JUMP] ####
 Regression<-readRDS('Final Datasets\\Regression Sample.RDS')
+#7.3 Plot: % of Breaches over time ####
 
-#Treatment Intensity:
+K=data.frame(Year=as.character(seq(2013,2022,1)),K=seq(0.35,1,0.65/9))
+F10=Baseline_Data%>%
+  select(REG_ANS,Year,PL)%>%
+  left_join(Adj_Equity%>%select(SM,REG_ANS))%>%
+  left_join(K)%>%
+  rowwise()%>%
+  mutate(Solvency=PL-SM*K)%>%
+  filter(!is.na(Solvency))%>%
+  group_by(Year)%>%
+  summarize(Result=mean(Solvency<0))%>%
+  ggplot(aes(x=Year,y=Result))+
+  geom_col()+
+  geom_text(aes(y=Result*1.05,label=scales::percent(Result)),col='black')+
+  scale_y_continuous(labels = scales::percent)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90,size=15))+
+  theme(axis.text.y = element_blank())+
+  theme(plot.title = element_text(face='bold',size=20))+
+  labs(x='',
+       y='% of Firms',
+       title='Solvency Margin breaches over time',
+       subtitle='% of Firms having Equity levels lower than estimated solvency margin levels needed for each year.')
 
+out.path=paste0(fig_path,"F10.pdf")
+pdf(out.path, height = 20, width =30, paper = "USr")
+print(grid.arrange(F10,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
+dev.off()
+
+#7.4 Plot: Market-share over time ####
+
+F11=Regression%>%
+  group_by(Year,Q_SSM)%>%
+  summarize(Benef=sum(Benef,na.rm=TRUE))%>%
+  group_by(Year)%>%
+  mutate(Total_Benef=sum(Benef,na.rm=TRUE),
+         Q_SSM=ifelse(is.na(Q_SSM),'Out of Reg. Sample',
+                      ifelse(Q_SSM==1,'Treatment','Control')))%>%
+  rowwise()%>%
+  mutate(Share=Benef/Total_Benef)%>%
+  ggplot(aes(x=Year,y=Share,fill=as.factor(Q_SSM)))+
+  geom_col()+
+  geom_text(aes(y=Share,label=scales::percent(Share,accuracy = 0.1),
+                group=as.factor(Q_SSM)),col='white',position = position_stack(vjust = .5))+
+  scale_y_continuous(labels = scales::percent)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90,size=15))+
+  theme(axis.text.y = element_blank())+
+  theme(plot.title = element_text(face='bold',size=20))+
+  scale_fill_grey()+
+  labs(x='',
+       y='',
+       fill='Exposure',
+       y='% of Firms',
+       title='Evolution of Market-Share across groups',
+       subtitle='Market-Share (in % of total Customers) relative to the total market.')
+
+out.path=paste0(fig_path,"F11.pdf")
+pdf(out.path, height = 20, width =30, paper = "USr")
+print(grid.arrange(F11,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+###################################################
+
+###################################################
+#Part 7: Firm-Level Results
+###################################################
+# 7.1 Summary of Results ####
 #Summary of results: this is nice! Here, having higher ex ante buffers seems to drive results on the long run.
-      #Claim: SSM is somewhat out of the control of managers? We could try to look at that.
-      #Result: firms that were constrained in 2010 grew less over time. 
-      #So, the SAME firm, suffering from the same shock, the only difference is that treated was lacking resources.
-      #This effect is concentrated within the subset of non-cooperative firms, but results hold in the overall sample
-      #Robust from getting SSM PERC OUT
-      #Robus to the inclusion of Ativa==1. Effect vanishes when looking only at situations where Flow<0. Interesting!
+#Claim: SSM is somewhat out of the control of managers? We could try to look at that.
+#Result: firms that were constrained in 2010 grew less over time. 
+#So, the SAME firm, suffering from the same shock, the only difference is that treated was lacking resources.
+#This effect is concentrated within the subset of non-cooperative firms, but results hold in the overall sample
+#Robust from getting SSM PERC OUT
+#Robus to the inclusion of Ativa==1. Effect vanishes when looking only at situations where Flow<0. Interesting!
 
-# 7.2.1 Basic D-D####
+# 7.2 Basic D-D ####
 #Key Takeaway: effect is driven by Employment Flow>0
 #Robust to the inclusion of +Sinistralidade+PPE_Ratio+ROE+ROI+Net_Mg+Leverage+Current_Ratio
 
@@ -874,7 +954,7 @@ formulas <- c(
   O_State_Benef~Q_SSM*Post+controls|Year|0|REG_ANS,
   O_State_Benef~Q_SSM*Post+controls|UF+Year+REG_ANS|0|REG_ANS,
   O_State_Benef~Q_SSM*Post+controls|as.factor(UF):as.factor(Year)+REG_ANS|0|REG_ANS)
-  
+
 #Add Covariates:
 
 #controls<-c('Post*(State_Perc+Share+Size)','Sinistralidade','PPE_Ratio','ROI','Net_Mg','Leverage','Current_Ratio')
@@ -899,23 +979,23 @@ lm.list <- lapply(formulas,felm, data=Regression)
 out.path <- paste0(table_path,"R1.tex")
 
 stargazer(lm.list,
-  dep.var.caption=label.dep.var,
-  #Columns
-  add.lines = list(c("Firm Controls",label.FE),
-                   c("Firm Controls $\\times$ Post",label.FE),
-                   c("Year FE","No",rep("$\\checkmark$",3)),
-                   c("State FE","No","No",rep("$\\checkmark$",1),"No"),
-                   c("Firm FE","No","No",rep("$\\checkmark$",1),"No"),
-                   c("State-Time FE","No","No","No","$\\checkmark$"),
-                   c("Cluster",label.cluster)),
-  #Omit
-  omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share"),
-  omit.stat = c("f","ser","adj.rsq"),
-  omit.table.layout =  "d",
-  #Labels
-  title="OLS - Growth in Customer Base and Solvency Margin Sufficiency",
-  covariate.labels=label.covariates,
-  type='latex', out=out.path)
+          dep.var.caption=label.dep.var,
+          #Columns
+          add.lines = list(c("Firm Controls",label.FE),
+                           c("Firm Controls $\\times$ Post",label.FE),
+                           c("Year FE","No",rep("$\\checkmark$",3)),
+                           c("State FE","No","No",rep("$\\checkmark$",1),"No"),
+                           c("Firm FE","No","No",rep("$\\checkmark$",1),"No"),
+                           c("State-Time FE","No","No","No","$\\checkmark$"),
+                           c("Cluster",label.cluster)),
+          #Omit
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="OLS - Growth in Customer Base and Solvency Margin Sufficiency",
+          covariate.labels=label.covariates,
+          type='latex', out=out.path)
 
 # II: Only cooperatives:
 
@@ -969,7 +1049,7 @@ stargazer(lm.list,
           type='latex', out=out.path)
 
 
-# 7.2.2 Dynamic Effects Regression: Coop x Non Coop####
+# 7.3 Dynamic Effects Regression: Coop x Non Coop####
 
 #All Sample
 R4<-felm(O_State_Benef~Q_SSM*(Y_2010+Y_2012+Y_2013+Y_2014+Y_2015+Y_2016+Y_2017+Y_2018)+
@@ -1069,7 +1149,7 @@ grid.arrange(Graph_R4,Graph_R5,Graph_R6,nrow=3)
 dev.off()
 
 
-# 7.2.3 Robustness 1: Employment Flows####
+# 7.4 Robustness 1: Employment Flows####
 
 #Set the formulas
 formulas <- c(
@@ -1139,7 +1219,7 @@ stargazer(lm.list,
           type='latex', out=out.path)
 
 
-# 7.2.4 Dynamic Effects Regression: Home x Away ####
+# 7.5 Robustness 2: Dynamic Effects Regression: Home x Away ####
 
 #Coop==0, Home==1
 R4<-felm(O_State_Benef~Q_SSM*(Y_2010+Y_2012+Y_2013+Y_2014+Y_2015+Y_2016+Y_2017+Y_2018)+
@@ -1209,7 +1289,7 @@ dev.off()
 
 
 
-# 7.2.5 Robustness 2: Matching Approach (by Year, UF, and Home/Away State)####
+# 7.6 Robustness 3: Matching Approach (by Year, UF, and Home/Away State)####
 Matching<-Regression%>%filter(Coop==1)%>%
   dplyr::select(Growth_Cust,Q_SSM,Year,UF,Home,ROI,ROE,Sinistralidade,EBITDA_Mg,Size,Net_Mg,PPE_Ratio,State_Benef)%>%
   drop_na()%>%
@@ -1230,76 +1310,64 @@ MatchingEst=Matchby(Y=Y,by=Cat,Tr=Tr,X=X[,1:5],estimand = 'ATT',AI=TRUE,ties = T
 MatchBalance(Q_SSM~State_Benef+ROI+ROE+Sinistralidade+EBITDA_Mg+Size+Net_Mg+PPE_Ratio,data=Matching, match.out=MatchingEst, nboots=5000)
 
 
-# 7.2.6 IV Regression (to-do) ##### 
+# 7.7 IV Regression: firms' financial outcomes ##### 
 
 #Here, we'll use the fact that these firms are indeed losing market share.
 #Since bad firms would lose anyway, we instrumentalize growth in terms of out previous regressions
 #How the induced lesser growth in customer base transmits to firms decisions?
+#Results show that Op Assets and Revenues are affected, which is what we would expect!
 
-#Set the formulas [must increase the number of outcomes here: Size, Cash, Leverage, etc]
-
-formulas<-
-  c(O_PPE~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-    O_OpAssets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS)
+formulas<-c(
+  O_Assets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  O_FinAssets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  O_OpAssets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  O_OpRevenue~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  O_Hazard~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  O_EBITDA~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS)
 
 #Apply Formulas
 formulas <- lapply(formulas, as.formula)
 
 #Labels
-label.FE <- c(rep("$\\checkmark$",2))
-label.cluster <- c(rep("Firm",2))
+label.FE <- c(rep("$\\checkmark$",6))
+label.cluster <- c(rep("Firm",6))
 label.dep.var <- c("Dependent Variable:")
-label.columns<-c("$\\Delta$ PPE","$\\Delta$ Op. Assets","")
-label.covariates<-c('Post','Treated','Treated $\\times$ Post')
+label.columns<-c("$\\Delta$ Assets",
+                 "$\\Delta$ Fin. Assets",
+                 "$\\Delta$ Op. Assets",
+                 "$\\Delta$ Op. Revenue",
+                 "$\\Hazard Ratio",
+                 "$\\Delta$ EBITDA")
 
-# I: Full Sample:
+label.covariates<-c('$\\widehat{Cust}$')
+
 #LaTeX
 lm.list <- lapply(formulas,felm, data=filter(Regression,Home==1))
-out.path <- paste0(table_path,"R1.tex")
+out.path <- paste0(table_path,"R6.tex")
 
 stargazer(lm.list,
           dep.var.caption=label.dep.var,
+          column.labels = label.columns,
           #Columns
           add.lines = list(c("Full Firm Controls",label.FE),
-                           c("Year FE","No",rep("$\\checkmark$",3)),
-                           c("State FE","No","No",rep("$\\checkmark$",2)),
-                           c("Firm FE","No","No",rep("$\\checkmark$",2)),
-                           c("State-Sector FE","No","No","No","$\\checkmark$"),
+                           c("Year FE",rep("$\\checkmark$",6)),
+                           c("State FE",rep("$\\checkmark$",6)),
+                           c("Firm FE",rep("$\\checkmark$",6)),
+                           c("State-Sector FE",rep("$\\checkmark$",6)),
                            c("Cluster",label.cluster)),
           #Omit
-          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share"),
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share"),
           omit.stat = c("f","ser","adj.rsq"),
           omit.table.layout =  "d",
           #Labels
-          title="OLS - Growth in Customer Base and Solvency Margin Sufficiency",
+          title="IV - Second-order effects on firms' outcomes",
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
 
-#Take off Size and PPE for the investment regressions.
-IV1<-felm(O_PPE~Post*(State_Perc+Share+Size)-Post|
-            as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-          exactDOF=TRUE,
-          data=filter(Regression,Home==1))
-
-#Elasticity of 1.03: given that the effect is 20%, these firms are able to tunnel approx 0.119 x 1.03 = 12.5% of growth for Operational Assets.
-IV2<-felm(O_OpAssets~Post*(State_Perc+Share+Size)-Post|
-            as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-          exactDOF=TRUE,
-          data=filter(Regression,Home==1))
-
-#More speficic measure of complaints?
-IV3<-felm(O_Complaints~Post*(State_Perc+Share+Size)-Post|
-            as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-          exactDOF=TRUE,
-          data=filter(Regression,Home==1))
-
-
-
-# 7.2.7 Probability of Survival (to-do)####
-
+# 7.8 IV Regression: Probability of Survival####
 #Adjust this: probability of each event and overall prob of delisting.
-Surv_Analysis<-Regression%>%dplyr::filter(Home==1)%>%
+Survival<-Regression%>%dplyr::filter(Home==1)%>%
   mutate(Dead_Date=ifelse(Data_Descredenciamento=="NA",NA,as.numeric(Data_Descredenciamento)))%>%
   mutate(Dead=ifelse(Dead_Date>=Year,1,0))%>%
   mutate(Dead=ifelse(is.na(Dead),0,Dead))
@@ -1307,37 +1375,153 @@ Surv_Analysis<-Regression%>%dplyr::filter(Home==1)%>%
 # Average delisting rate is: 11%
 mean(Surv_Analysis$Dead,na.rm=TRUE)
 
-#Reduces the likelihood of delisting by -0.09 x 20% = -0.018%. 0.018/0.11 =~ 16% more likely to delist
-IV4<-felm(Dead~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|
-            (O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|
-            UF+Year,exactDOF=TRUE,data=Surv_Analysis)
+#Reduces the likelihood of delisting by -0.09 x 20 (avg effect)% = -0.018%. 0.018/0.11 =~ 16% more likely to delist
+R7<-felm(Dead~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,data=Surv_Analysis)
 
+label.FE <- c(rep("$\\checkmark$",1))
+label.cluster <- c(rep("Firm",1))
+label.dep.var <- c("Dependent Variable:")
+label.columns<-c("Survival")
+label.covariates<-c('$\\widehat{Cust}$')
 
+#LaTeX
+out.path <- paste0(table_path,"R7.tex")
+
+stargazer(R7,
+          dep.var.caption=label.dep.var,
+          column.labels = label.columns,
+          #Columns
+          add.lines = list(c("Full Firm Controls",label.FE),
+                           c("Year FE",rep("$\\checkmark$",1)),
+                           c("State FE",rep("$\\checkmark$",1)),
+                           c("Firm FE",rep("$\\checkmark$",1)),
+                           c("State-Sector FE",rep("$\\checkmark$",1)),
+                           c("Cluster",label.cluster)),
+          #Omit
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share","Post"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="IV - Second-order effects on firms' outcomes - Likelihood of delisting",
+          covariate.labels=label.covariates,
+          type='latex', out=out.path)
+
+#Tease out the specific motives
 library(dummies)
 
-Dummy=dummy(Surv_Analysis$Motivo_do_Descredenciamento)%>%as.data.frame()
-Dummy$D_Inv<-Dummy[,1]+Dummy[,2]+Dummy[,3]
-Dummy$D_Vol<-Dummy[,5]+Dummy[,6]+Dummy[,7]
-
+Dummy=dummy(Survival$Motivo_do_Descredenciamento)%>%as.data.frame()
 names(Dummy)[1:7]<-c('D_Alt_Deliberacao','D_Deliberacao','D_Liquidacao','NA','D_Pedido_Cancelamento','D_Canc_Pos_Cisao','D_Incorporacao')
-
-Survival<-cbind(Surv_Analysis,Dummy)%>%filter(REG_ANS %in% unique(filter(Surv_Analysis,Ativa!=1)$REG_ANS))
-
-#More Likely to be liquidated
-summary(felm(D_Alt_Deliberacao~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
-summary(felm(D_Deliberacao~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
-summary(felm(D_Liquidacao~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
-summary(felm(D_Pedido_Cancelamento~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
-summary(felm(D_Canc_Pos_Cisao~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
-summary(felm(D_Incorporacao~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)|0|UF+Year,exactDOF=TRUE,data=Survival))
+Dummy$D_Deliberacao<-Dummy[,"D_Alt_Deliberacao"]+Dummy[,"D_Deliberacao"]
+Dummy$D_Cancelamento<-Dummy[,"D_Pedido_Cancelamento"]+Dummy[,"D_Canc_Pos_Cisao"]
+Dummy=Dummy%>%select(D_Deliberacao,D_Cancelamento,D_Incorporacao,D_Liquidacao)
 
 
+Survival<-cbind(Surv_Analysis,Dummy)
+#Survival<-cbind(Surv_Analysis,Dummy)%>%filter(REG_ANS %in% unique(filter(Surv_Analysis,Ativa!=1)$REG_ANS))
+
+formulas<-c(
+  D_Deliberacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  D_Cancelamento~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  D_Incorporacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
+  D_Liquidacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS)
+
+#Apply Formulas
+formulas <- lapply(formulas, as.formula)
+
+#Labels
+label.FE <- c(rep("$\\checkmark$",4))
+label.cluster <- c(rep("Firm",4))
+label.dep.var <- c("Dependent Variable:")
+label.columns<-c("$\\RAG",
+                 "$\\Cancellation",
+                 "$\\Incorporation",
+                 "$\\Liquidation")
+
+label.covariates<-c('$\\widehat{Cust}$')
+
+#LaTeX
+lm.list <- lapply(formulas,felm, data=Survival)
+out.path <- paste0(table_path,"R8.tex")
+
+stargazer(lm.list,
+          dep.var.caption=label.dep.var,
+          column.labels = label.columns,
+          #Columns
+          add.lines = list(c("Full Firm Controls",label.FE),
+                           c("Year FE",rep("$\\checkmark$",4)),
+                           c("State FE",rep("$\\checkmark$",4)),
+                           c("Firm FE",rep("$\\checkmark$",4)),
+                           c("State-Sector FE",rep("$\\checkmark$",4)),
+                           c("Cluster",label.cluster)),
+          #Omit
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share","Post"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="IV - Second-order effects on firms' outcomes - Delisting Motivations",
+          covariate.labels=label.covariates,
+          type='latex', out=out.path)
 
 
 
 
 
-# Leverage Test: what has happened to these constrained firms over time?####
+
+
+
+###################################################
+#Part 8: State-Level Results (TO-DO)
+###################################################
+
+
+# HHI
+State_HHI=Regression%>%
+  dplyr::select(Year,UF,State_Benef)%>%
+  arrange(Year,UF)%>%
+  group_by(Year,UF)%>%
+  mutate(Share=State_Benef/sum(State_Benef,na.rm=TRUE))%>%
+  summarize(HHI=sum(Share^2,na.rm=TRUE),
+            State_Benef=sum(State_Benef))%>%
+  left_join(dplyr::select(Regression,c(UF,Year,Post,starts_with('Y_')))%>%distinct())
+
+
+State_Regression=Regression%>%
+  dplyr::select(SSM_Perc,State_Benef,Year,UF,Size,Coop,Post,starts_with('Y_'),Flow)%>%
+  group_by(Year,UF)%>%
+  summarize(Q_SSM=weighted.mean(SSM_Perc,Size,na.rm=TRUE),
+            Coop=mean(Coop,na.rm=TRUE),
+            Flow=mean(Flow,na.rm=TRUE))%>%
+  filter(!is.nan(Q_SSM))%>%
+  left_join(State_HHI)%>%
+  ungroup()%>%
+  mutate(Q_SSM=ntile(Q_SSM,5),
+         Med=Q_SSM<median(Q_SSM))
+
+R1=felm(log(1+HHI)~Post+Med|UF+Year|0|UF,data=State_Regression)
+R2=felm(log(1+HHI)~Post*Med|UF+Year|0|UF,data=State_Regression)
+R3=felm(log(1+HHI)~Post*Flow*Med|UF+Year|0|UF,data=State_Regression)
+
+out.path='R7.tex'
+
+stargazer(R1,R2,R3,
+          dep.var.caption="log(1+$HHI_{s,t}$)",
+          #Columns
+          add.lines = list(c("Year FE",rep("$\\checkmark$",3)),
+                           c("State FE",rep("$\\checkmark$",3)),
+                           c("Cluster",rep("State",3))),
+          #Omit
+          omit = c("Constant"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="OLS - Growth in Customer Base and Solvency Margin Sufficiency - Excluding Health Cooperatives",
+          covariate.labels=c('$Rule$','$EmpFlow$','$Exposure$','$Rule \\times EmpFlow$','$Rule \\times Exposure$',
+                             '$EmpFlow \\times Exposure$', '$Rule \\times EmpFlow \\times Exposure $'),
+          type='latex', out=out.path)
+
+
+
+
 
 PreTest<-Regression%>%dplyr::filter(Home==1,Year==2010,Ativa==1)%>%
   group_by(Coop)%>%
@@ -1348,7 +1532,7 @@ Leverage<-Regression%>%dplyr::filter(REG_ANS %in% PreTest$REG_ANS)%>%
   left_join(PreTest)%>%
   group_by(Q_SSM,Year,Coop)%>%
   summarize(SSM=median(Ativo_Total/PL,na.rm=TRUE))
-  
+
 ggplot(Leverage,aes(x=Year,y=SSM,group=Q_SSM,col=as.factor(Q_SSM)))+
   geom_line(size=1)+
   theme_minimal()+
@@ -1359,7 +1543,7 @@ ggplot(Leverage,aes(x=Year,y=SSM,group=Q_SSM,col=as.factor(Q_SSM)))+
   labs(y='SSM (%)',x='',col='Quintiles of SSM (%) as of 2010',
        title='Median Equity Buffers, by Quintiles',subtitle='Based on the distribution of SSM (%) as of 2010.')+
   theme(legend.position = 'bottom')
-  
+
 
 
 #Herfindahl-Hirschman Index
@@ -1378,7 +1562,3 @@ HHI%>%arrange(desc(index(HHI)))%>%mutate(across(c(2),~.x*10000))%>%
   labs(x='',y='Herfindahl-Hirschman-Index (HHI)',
        title='Healthcare Industry Concentration over time',
        subtitle='Total Market as all categories, Selected Market including only studied categories.')
-
-
-
-
