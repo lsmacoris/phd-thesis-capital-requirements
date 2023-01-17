@@ -705,15 +705,28 @@ pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F9,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
 
-#Number of breaches per year
 
+#Herfindahl-Hirschman Index
+HHI=read.csv("Raw Datasets\\MarketShare\\HHI.csv")
 
+F10=HHI%>%arrange(desc(index(HHI)))%>%mutate(across(c(2),~.x*10000))%>%
+  ggplot(aes(x=Period,y=HHI,col=Industry))+
+  geom_point(size=5)+
+  theme_minimal()+
+  scale_colour_grey()+
+  theme(axis.title = element_text(size=15))+
+  theme(axis.text = element_text(size=12))+
+  theme(axis.text.x = element_text(angle = 90))+
+  theme(plot.title = element_text(face='bold',size=15))+
+  theme(legend.position = 'bottom')+
+  labs(x='',y='Herfindahl-Hirschman-Index (HHI)',
+       title='Healthcare Industry Concentration over time',
+       subtitle='Total Market as all categories, Selected Market including only studied categories.')
 
-out.path=paste0(fig_path,"F4.pdf")
+out.path=paste0(fig_path,"F10.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
-print(grid.arrange(F7,F8,nrow=2, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
+print(grid.arrange(F10,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
-
 ###################################################
 
 ###################################################
@@ -1470,11 +1483,13 @@ stargazer(lm.list,
 
 
 ###################################################
+
+###################################################
 #Part 8: State-Level Results (TO-DO)
 ###################################################
+#Setup the data ####
 
-
-# HHI
+#HHI
 State_HHI=Regression%>%
   dplyr::select(Year,UF,State_Benef)%>%
   arrange(Year,UF)%>%
@@ -1482,51 +1497,97 @@ State_HHI=Regression%>%
   mutate(Share=State_Benef/sum(State_Benef,na.rm=TRUE))%>%
   summarize(HHI=sum(Share^2,na.rm=TRUE),
             State_Benef=sum(State_Benef))%>%
-  left_join(dplyr::select(Regression,c(UF,Year,Post,starts_with('Y_')))%>%distinct())
+  left_join(dplyr::select(Regression,c(UF,Year,Post))%>%distinct())
 
+# Internations
+State_Internations=read.csv('C:/Users/Lucas/Desktop/Internations.csv')
+names(State_Internations)[1]='Date'
+
+State_Internations=State_Internations%>%
+  mutate(Date=as.Date(Date,format='%m/%d/%Y'))%>%
+  filter(month(Date)==12)%>%
+  mutate(Year=as.character(year(Date)))%>%
+  select(-Date)%>%
+  gather(key='UF',value = 'Internations',-Year)%>%
+  mutate(Internations=as.numeric(Internations))
+
+# Outpatient Procedures
+State_Outpatient=read.csv('C:/Users/Lucas/Desktop/Outpatients.csv')
+names(State_Outpatient)[1]='Date'
+
+State_Outpatient=State_Outpatient%>%
+  mutate(Date=as.Date(Date,format='%m/%d/%Y'))%>%
+  filter(month(Date)==12)%>%
+  mutate(Year=as.character(year(Date)))%>%
+  select(-Date)%>%
+  gather(key='UF',value = 'Outpatient',-Year)%>%
+  mutate(Outpatient=as.numeric(Outpatient))
 
 State_Regression=Regression%>%
-  dplyr::select(SSM_Perc,State_Benef,Year,UF,Size,Coop,Post,starts_with('Y_'),Flow)%>%
+  dplyr::select(SSM_Perc,State_Benef,Year,UF,Size,Post,Flow,Complaints)%>%
   group_by(Year,UF)%>%
   summarize(Q_SSM=weighted.mean(SSM_Perc,Size,na.rm=TRUE),
-            Coop=mean(Coop,na.rm=TRUE),
-            Flow=mean(Flow,na.rm=TRUE))%>%
+            Flow=weighted.mean(Flow,Size,na.rm=TRUE),
+            Complaints=sum(Complaints,na.rm=TRUE))%>%
   filter(!is.nan(Q_SSM))%>%
   left_join(State_HHI)%>%
+  left_join(State_Internations)%>%
+  left_join(State_Outpatient)%>%
   ungroup()%>%
   mutate(Q_SSM=ntile(Q_SSM,5),
-         Med=Q_SSM<median(Q_SSM))
-
-R1=felm(log(1+HHI)~Post+Med|UF+Year|0|UF,data=State_Regression)
-R2=felm(log(1+HHI)~Post*Med|UF+Year|0|UF,data=State_Regression)
-R3=felm(log(1+HHI)~Post*Flow*Med|UF+Year|0|UF,data=State_Regression)
-
-out.path='R7.tex'
-
-stargazer(R1,R2,R3,
-          dep.var.caption="log(1+$HHI_{s,t}$)",
-          #Columns
-          add.lines = list(c("Year FE",rep("$\\checkmark$",3)),
-                           c("State FE",rep("$\\checkmark$",3)),
-                           c("Cluster",rep("State",3))),
-          #Omit
-          omit = c("Constant"),
-          omit.stat = c("f","ser","adj.rsq"),
-          omit.table.layout =  "d",
-          #Labels
-          title="OLS - Growth in Customer Base and Solvency Margin Sufficiency - Excluding Health Cooperatives",
-          covariate.labels=c('$Rule$','$EmpFlow$','$Exposure$','$Rule \\times EmpFlow$','$Rule \\times Exposure$',
-                             '$EmpFlow \\times Exposure$', '$Rule \\times EmpFlow \\times Exposure $'),
-          type='latex', out=out.path)
+         Q_SSM=Q_SSM<median(Q_SSM))
 
 
+#Regressions
+# HHI Regression ####
 
+  formulas<-c(
+    log(1+HHI)~Post+Q_SSM|UF+Year|0|UF,
+    log(1+HHI)~Post*Q_SSM|UF+Year|0|UF,
+    log(1+HHI)~Post*Flow*Q_SSM|UF+Year|0|UF)
+  
+  #Apply Formulas
+  formulas <- lapply(formulas, as.formula)
+  
+  #LaTeX
+  lm.list <- lapply(formulas,felm, data=State_Regression)
+  out.path <- paste0(table_path,"R9.tex")
 
-
-PreTest<-Regression%>%dplyr::filter(Home==1,Year==2010,Ativa==1)%>%
+  #Render Results
+  stargazer(lm.list,
+            dep.var.caption="log(1+$HHI_{s,t}$)",
+            #Columns
+            add.lines = list(c("Year FE",rep("$\\checkmark$",3)),
+                             c("State FE",rep("$\\checkmark$",3)),
+                             c("Cluster",rep("State",3))),
+            #Omit
+            omit = c("Constant"),
+            omit.stat = c("f","ser","adj.rsq"),
+            omit.table.layout =  "d",
+            #Labels
+            title="OLS - Growth in Customer Base and Solvency Margin Sufficiency - Excluding Health Cooperatives",
+            covariate.labels=c('$Rule$','$EmpFlow$','$Exposure$','$Rule \\times EmpFlow$','$Rule \\times Exposure$',
+                               '$EmpFlow \\times Exposure$', '$Rule \\times EmpFlow \\times Exposure $'),
+            type='latex', out=out.path)
+  
+  PreTest<-Regression%>%dplyr::filter(Home==1,Year==2010,Ativa==1)%>%
   group_by(Coop)%>%
   mutate(Q_SSM=ntile(Ativo_Total/PL,5))%>%dplyr::select(REG_ANS,Q_SSM,Coop)
 
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 Leverage<-Regression%>%dplyr::filter(REG_ANS %in% PreTest$REG_ANS)%>%
   select(-c(Q_SSM,Coop))%>%
   left_join(PreTest)%>%
@@ -1545,20 +1606,47 @@ ggplot(Leverage,aes(x=Year,y=SSM,group=Q_SSM,col=as.factor(Q_SSM)))+
   theme(legend.position = 'bottom')
 
 
+# Health Outcomes
 
-#Herfindahl-Hirschman Index
-HHI=read.csv("Raw Datasets\\MarketShare\\HHI.csv")
+# Health Outcomes Regression ####
 
-HHI%>%arrange(desc(index(HHI)))%>%mutate(across(c(2),~.x*10000))%>%
-  ggplot(aes(x=Period,y=HHI,col=Industry))+
-  geom_point(size=5)+
-  theme_minimal()+
-  scale_colour_grey()+
-  theme(axis.title = element_text(size=15))+
-  theme(axis.text = element_text(size=12))+
-  theme(axis.text.x = element_text(angle = 90))+
-  theme(plot.title = element_text(face='bold',size=15))+
-  theme(legend.position = 'bottom')+
-  labs(x='',y='Herfindahl-Hirschman-Index (HHI)',
-       title='Healthcare Industry Concentration over time',
-       subtitle='Total Market as all categories, Selected Market including only studied categories.')
+formulas<-c(log(Internations)~Post*Flow*Q_SSM|UF+Year|0|UF,
+            log(Outpatient)~Post*Flow*Q_SSM|UF+Year|0|UF)
+
+#Apply Formulas
+formulas <- lapply(formulas, as.formula)
+
+#LaTeX
+lm.list <- lapply(formulas,felm, data=State_Regression)
+out.path <- paste0(table_path,"R12.tex")
+
+label.dep.var <- c("Dependent Variable:")
+label.columns<-c("log(Internations)","log(Outpatient)")
+
+#Render Results
+stargazer(lm.list,
+          dep.var.caption = label.dep.var,
+          column.labels=label.columns,
+          #Columns
+          add.lines = list(c("Year FE",rep("$\\checkmark$",2)),
+                           c("State FE",rep("$\\checkmark$",2)),
+                           c("Cluster",rep("State",2))),
+          #Omit
+          omit = c("Constant"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="State-level Health Outcomes according to Exposure to Solvency Margin",
+          covariate.labels=c('$Rule$','$EmpFlow$','$Exposure$','$Rule \\times EmpFlow$','$Rule \\times Exposure$',
+                             '$EmpFlow \\times Exposure$', '$Rule \\times EmpFlow \\times Exposure $'),
+          type='latex', out=out.path)
+
+###################################################
+
+
+###################################################
+#Part 9: Pricing
+###################################################
+
+
+
