@@ -222,7 +222,7 @@ Financials_2010_2012$`341`<-NA
 Financials<-full_join(Financials_2010_2012,Financials_2013_2019)
 
 #Save this datasets
-saveRDS(Financials,'Final Datasets\\Financials.RDS')
+#saveRDS(Financials,'Final Datasets\\Financials.RDS')
 
 ###################################################
 
@@ -723,7 +723,7 @@ F10=HHI%>%arrange(desc(index(HHI)))%>%mutate(across(c(2),~.x*10000))%>%
        title='Healthcare Industry Concentration over time',
        subtitle='Total Market as all categories, Selected Market including only studied categories.')
 
-out.path=paste0(fig_path,"F10.pdf")
+out.path=paste0(fig_path,"F6.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F10,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
@@ -893,7 +893,7 @@ F10=Baseline_Data%>%
        title='Solvency Margin breaches over time',
        subtitle='% of Firms having Equity levels lower than estimated solvency margin levels needed for each year.')
 
-out.path=paste0(fig_path,"F10.pdf")
+out.path=paste0(fig_path,"F7.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F10,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
@@ -926,21 +926,10 @@ F11=Regression%>%
        title='Evolution of Market-Share across groups',
        subtitle='Market-Share (in % of total Customers) relative to the total market.')
 
-out.path=paste0(fig_path,"F11.pdf")
+out.path=paste0(fig_path,"F8.pdf")
 pdf(out.path, height = 20, width =30, paper = "USr")
 print(grid.arrange(F11,nrow=1, bottom = textGrob("Source: Agência Nacional da Saúde Suplementar (ANS)", x = 0.8)))
 dev.off()
-
-
-
-
-
-
-
-
-
-
-
 
 ###################################################
 
@@ -1156,7 +1145,7 @@ Graph_R6<-ggplot(Graph_R6,aes(x=Year,y=Estimate))+
 
 
 # PDF graphics device
-out.path=paste0(fig_path,"Dynamic_1.pdf")
+out.path=paste0(fig_path,"F9.pdf")
 pdf(out.path, height = 100, width =30, paper = "letter")
 grid.arrange(Graph_R4,Graph_R5,Graph_R6,nrow=3)
 dev.off()
@@ -1231,7 +1220,6 @@ stargazer(lm.list,
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
-
 # 7.5 Robustness 2: Dynamic Effects Regression: Home x Away ####
 
 #Coop==0, Home==1
@@ -1295,12 +1283,10 @@ Graph_R5<-ggplot(Graph_R5,aes(x=Year,y=Estimate))+
   theme(legend.position = 'bottom')
 
 # PDF graphics device
-out.path=paste0(fig_path,"Dynamic_2.pdf")
+out.path=paste0(fig_path,"F10.pdf")
 pdf(out.path, height = 100, width =30, paper = "letter")
 grid.arrange(Graph_R4,Graph_R5,nrow=2)
 dev.off()
-
-
 
 # 7.6 Robustness 3: Matching Approach (by Year, UF, and Home/Away State)####
 Matching<-Regression%>%filter(Coop==1)%>%
@@ -1363,10 +1349,8 @@ stargazer(lm.list,
           column.labels = label.columns,
           #Columns
           add.lines = list(c("Full Firm Controls",label.FE),
-                           c("Year FE",rep("$\\checkmark$",6)),
-                           c("State FE",rep("$\\checkmark$",6)),
                            c("Firm FE",rep("$\\checkmark$",6)),
-                           c("State-Sector FE",rep("$\\checkmark$",6)),
+                           c("State-Year FE",rep("$\\checkmark$",6)),
                            c("Cluster",label.cluster)),
           #Omit
           omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share"),
@@ -1379,20 +1363,18 @@ stargazer(lm.list,
 
 
 # 7.8 IV Regression: Probability of Survival####
+
 #Adjust this: probability of each event and overall prob of delisting.
-Survival<-Regression%>%dplyr::filter(Home==1)%>%
-  mutate(Dead_Date=ifelse(Data_Descredenciamento=="NA",NA,as.numeric(Data_Descredenciamento)))%>%
-  mutate(Dead=ifelse(Dead_Date>=Year,1,0))%>%
-  mutate(Dead=ifelse(is.na(Dead),0,Dead))
+Survival<-Regression%>%dplyr::filter(Home==1)%>%mutate(Delisted=ifelse(Ativa==1,0,1))
 
 # Average delisting rate is: 11%
-mean(Surv_Analysis$Dead,na.rm=TRUE)
+mean(Survival$Ativa,na.rm=TRUE)-1
 
-#Reduces the likelihood of delisting by -0.09 x 20 (avg effect)% = -0.018%. 0.018/0.11 =~ 16% more likely to delist
-R7<-felm(Dead~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,data=Surv_Analysis)
+#Reduces the likelihood of delisting by -0.074 x 20 (avg effect)% = -0.018%. 0.018/0.11 =~ 13% more likely to be active
+R7<-felm(Delisted~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF,data=Survival)
 
 label.FE <- c(rep("$\\checkmark$",1))
-label.cluster <- c(rep("Firm",1))
+label.cluster <- c(rep("UF",1))
 label.dep.var <- c("Dependent Variable:")
 label.columns<-c("Survival")
 label.covariates<-c('$\\widehat{Cust}$')
@@ -1407,7 +1389,6 @@ stargazer(R7,
           add.lines = list(c("Full Firm Controls",label.FE),
                            c("Year FE",rep("$\\checkmark$",1)),
                            c("State FE",rep("$\\checkmark$",1)),
-                           c("Firm FE",rep("$\\checkmark$",1)),
                            c("State-Sector FE",rep("$\\checkmark$",1)),
                            c("Cluster",label.cluster)),
           #Omit
@@ -1429,26 +1410,27 @@ Dummy$D_Cancelamento<-Dummy[,"D_Pedido_Cancelamento"]+Dummy[,"D_Canc_Pos_Cisao"]
 Dummy=Dummy%>%select(D_Deliberacao,D_Cancelamento,D_Incorporacao,D_Liquidacao)
 
 
-Survival<-cbind(Surv_Analysis,Dummy)
-#Survival<-cbind(Surv_Analysis,Dummy)%>%filter(REG_ANS %in% unique(filter(Surv_Analysis,Ativa!=1)$REG_ANS))
+#Survival<-cbind(Survival,Dummy)
+Survival<-cbind(Survival,Dummy)%>%filter(Ativa!=1)
 
 formulas<-c(
-  D_Deliberacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  D_Cancelamento~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  D_Incorporacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  D_Liquidacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS)
+  D_Deliberacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
+  D_Cancelamento~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
+  D_Incorporacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
+  D_Liquidacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS)
 
 #Apply Formulas
 formulas <- lapply(formulas, as.formula)
 
 #Labels
-label.FE <- c(rep("$\\checkmark$",4))
-label.cluster <- c(rep("Firm",4))
+label.FE <- c(rep("$\\checkmark$",5))
+label.cluster <- c(rep("Firm",5))
 label.dep.var <- c("Dependent Variable:")
-label.columns<-c("$\\RAG",
-                 "$\\Cancellation",
-                 "$\\Incorporation",
-                 "$\\Liquidation")
+label.columns<-c("\\textit{Delisted}",
+                 "\\textit{RAG}",
+                 "\\textit{Cancellation}",
+                 "\\textit{Incorporation}",
+                 "\\textit{Liquidation}")
 
 label.covariates<-c('$\\widehat{Cust}$')
 
@@ -1456,15 +1438,12 @@ label.covariates<-c('$\\widehat{Cust}$')
 lm.list <- lapply(formulas,felm, data=Survival)
 out.path <- paste0(table_path,"R8.tex")
 
-stargazer(lm.list,
+stargazer(R7,lm.list,
           dep.var.caption=label.dep.var,
           column.labels = label.columns,
           #Columns
           add.lines = list(c("Full Firm Controls",label.FE),
-                           c("Year FE",rep("$\\checkmark$",4)),
-                           c("State FE",rep("$\\checkmark$",4)),
-                           c("Firm FE",rep("$\\checkmark$",4)),
-                           c("State-Sector FE",rep("$\\checkmark$",4)),
+                           c("State-Year FE",rep("$\\checkmark$",5)),
                            c("Cluster",label.cluster)),
           #Omit
           omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share","Post"),
@@ -1475,19 +1454,12 @@ stargazer(lm.list,
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
-
-
-
-
-
-
-
 ###################################################
 
 ###################################################
-#Part 8: State-Level Results (TO-DO)
+#Part 8: State-Level Results
 ###################################################
-#Setup the data ####
+# Setup the data ####
 
 #HHI
 State_HHI=Regression%>%
@@ -1500,7 +1472,7 @@ State_HHI=Regression%>%
   left_join(dplyr::select(Regression,c(UF,Year,Post))%>%distinct())
 
 # Internations
-State_Internations=read.csv('C:/Users/Lucas/Desktop/Internations.csv')
+State_Internations=read.csv('Final Datasets/Internations.csv')
 names(State_Internations)[1]='Date'
 
 State_Internations=State_Internations%>%
@@ -1512,7 +1484,7 @@ State_Internations=State_Internations%>%
   mutate(Internations=as.numeric(Internations))
 
 # Outpatient Procedures
-State_Outpatient=read.csv('C:/Users/Lucas/Desktop/Outpatients.csv')
+State_Outpatient=read.csv('Final Datasets/Outpatients.csv')
 names(State_Outpatient)[1]='Date'
 
 State_Outpatient=State_Outpatient%>%
@@ -1570,67 +1542,30 @@ State_Regression=Regression%>%
                                '$EmpFlow \\times Exposure$', '$Rule \\times EmpFlow \\times Exposure $'),
             type='latex', out=out.path)
   
-  PreTest<-Regression%>%dplyr::filter(Home==1,Year==2010,Ativa==1)%>%
-  group_by(Coop)%>%
-  mutate(Q_SSM=ntile(Ativo_Total/PL,5))%>%dplyr::select(REG_ANS,Q_SSM,Coop)
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-Leverage<-Regression%>%dplyr::filter(REG_ANS %in% PreTest$REG_ANS)%>%
-  select(-c(Q_SSM,Coop))%>%
-  left_join(PreTest)%>%
-  group_by(Q_SSM,Year,Coop)%>%
-  summarize(SSM=median(Ativo_Total/PL,na.rm=TRUE))
-
-ggplot(Leverage,aes(x=Year,y=SSM,group=Q_SSM,col=as.factor(Q_SSM)))+
-  geom_line(size=1)+
-  theme_minimal()+
-  theme(axis.text = element_text(size=12))+
-  theme(axis.text.x = element_text(angle = 90))+
-  theme(plot.title = element_text(face='bold',size=15))+
-  facet_wrap(Coop~.,nrow=2,labeller = labeller(Coop=c(`0`='All Sample, Excluding Health Cooperatives',`1`='Health Cooperatives')))+
-  labs(y='SSM (%)',x='',col='Quintiles of SSM (%) as of 2010',
-       title='Median Equity Buffers, by Quintiles',subtitle='Based on the distribution of SSM (%) as of 2010.')+
-  theme(legend.position = 'bottom')
-
-
-# Health Outcomes
-
 # Health Outcomes Regression ####
 
 formulas<-c(log(Internations)~Post*Flow*Q_SSM|UF+Year|0|UF,
-            log(Outpatient)~Post*Flow*Q_SSM|UF+Year|0|UF)
+            log(Outpatient)~Post*Flow*Q_SSM|UF+Year|0|UF,
+            log(Complaints)~Post*Flow*Q_SSM|UF+Year)
 
 #Apply Formulas
 formulas <- lapply(formulas, as.formula)
 
 #LaTeX
 lm.list <- lapply(formulas,felm, data=State_Regression)
-out.path <- paste0(table_path,"R12.tex")
+out.path <- paste0(table_path,"R10.tex")
 
 label.dep.var <- c("Dependent Variable:")
-label.columns<-c("log(Internations)","log(Outpatient)")
+label.columns<-c("log(Internations)","log(Outpatient)","log(Complaints)")
 
 #Render Results
 stargazer(lm.list,
           dep.var.caption = label.dep.var,
           column.labels=label.columns,
           #Columns
-          add.lines = list(c("Year FE",rep("$\\checkmark$",2)),
-                           c("State FE",rep("$\\checkmark$",2)),
-                           c("Cluster",rep("State",2))),
+          add.lines = list(c("Year FE",rep("$\\checkmark$",3)),
+                           c("State FE",rep("$\\checkmark$",3)),
+                           c("Cluster",rep("State",3))),
           #Omit
           omit = c("Constant"),
           omit.stat = c("f","ser","adj.rsq"),
@@ -1643,10 +1578,92 @@ stargazer(lm.list,
 
 ###################################################
 
-
 ###################################################
 #Part 9: Pricing
-###################################################
+################################################### 
+# Setup the Data ####
+Prices=readRDS("Final Datasets/Prices.rds")%>%
+  group_by(CD_OPERADORA,FAIXA_ETARIA,Year)%>%
+  summarize(Price=median(VL_COMERCIAL_MENSALIDADE,na.rm=TRUE))%>%
+  rename(REG_ANS=CD_OPERADORA)%>%
+  mutate(Year=as.character(Year),
+         REG_ANS=as.character(REG_ANS))
 
+Temp_Regression=Regression%>%
+  left_join(Prices)%>%
+  arrange(REG_ANS,Year)%>%
+  mutate(LeadPrice=lead(Price,1))
+
+# Single Regression ####
+R1=felm(log(LeadPrice)~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS+FAIXA_ETARIA|
+          (O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|
+          REG_ANS+UF+FAIXA_ETARIA,data=filter(Temp_Regression,Home==1))
+
+#Labels
+label.FE <- c(rep("$\\checkmark$",1))
+label.cluster <- c(rep("Firm + UF + Age Bracket",1))
+label.dep.var <- c("Dependent Variable:")
+label.covariates<-c('$\\widehat{Cust}$')
+
+#LaTeX
+out.path <- paste0(table_path,"R11.tex")
+
+stargazer(R1,
+          dep.var.caption=label.dep.var,
+          #Columns
+          add.lines = list(c("Full Firm Controls",label.FE),
+                           c("Firm FE",rep("$\\checkmark$",1)),
+                           c("State-Year FE",rep("$\\checkmark$",1)),
+                           c("Cluster",label.cluster)),
+          #Omit
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="IV - Pricing Regressions",
+          covariate.labels=label.covariates,
+          type='latex', out=out.path)
+
+# Varying on age ####
+
+formula=as.formula(log(Price)~Post*(State_Perc+Share+Size)-Post|
+                     as.factor(UF):as.factor(Year)+REG_ANS|
+                     (O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS+UF)
+
+for (i in 1:10){
+  assign(paste0('R',i),felm(formula,data=filter(Temp_Regression,FAIXA_ETARIA==unique(Temp_Regression$FAIXA_ETARIA)[i],Home==1)))
+}
+
+
+#Labels
+label.FE <- c(rep("$\\checkmark$",10))
+label.cluster <- c(rep("Firm $\\times$ UF",10))
+label.dep.var <- c("Dependent Variable:")
+label.columns<-unique(Temp_Regression$FAIXA_ETARIA)[1:10]
+
+label.covariates<-c('$\\widehat{Cust}$')
+
+#LaTeX
+lm.list <- list(R1,R2,R3,R4,R5,R6,R7,R8,R9,R10)
+out.path <- paste0(table_path,"R12.tex")
+
+stargazer(lm.list,
+          dep.var.caption=label.dep.var,
+          column.labels = label.columns,
+          #Columns
+          add.lines = list(c("Full Firm Controls",label.FE),
+                           c("Firm FE",rep("$\\checkmark$",10)),
+                           c("State-Year FE",rep("$\\checkmark$",10)),
+                           c("Cluster",label.cluster)),
+          #Omit
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share"),
+          omit.stat = c("f","ser","adj.rsq"),
+          omit.table.layout =  "d",
+          #Labels
+          title="IV - Pricing Regressions, varying on Age brackets",
+          covariate.labels=label.covariates,
+          type='latex', out=out.path)
+
+################################################### 
 
 
