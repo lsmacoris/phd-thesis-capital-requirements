@@ -1309,7 +1309,7 @@ MatchingEst=Matchby(Y=Y,by=Cat,Tr=Tr,X=X[,1:5],estimand = 'ATT',AI=TRUE,ties = T
 MatchBalance(Q_SSM~State_Benef+ROI+ROE+Sinistralidade+EBITDA_Mg+Size+Net_Mg+PPE_Ratio,data=Matching, match.out=MatchingEst, nboots=5000)
 
 
-# 7.7 IV Regression: firms' financial outcomes ##### 
+# 7.7 Ex-Post Regression: firms' financial outcomes ##### 
 
 #Here, we'll use the fact that these firms are indeed losing market share.
 #Since bad firms would lose anyway, we instrumentalize growth in terms of out previous regressions
@@ -1317,12 +1317,12 @@ MatchBalance(Q_SSM~State_Benef+ROI+ROE+Sinistralidade+EBITDA_Mg+Size+Net_Mg+PPE_
 #Results show that Op Assets and Revenues are affected, which is what we would expect!
 
 formulas<-c(
-  O_Assets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  O_FinAssets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  O_OpAssets~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  O_OpRevenue~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  O_Hazard~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS,
-  O_EBITDA~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS)
+  O_Assets~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  O_FinAssets~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  O_OpAssets~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  O_OpRevenue~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  O_Hazard~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  O_EBITDA~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS)
 
 #Apply Formulas
 formulas <- lapply(formulas, as.formula)
@@ -1338,7 +1338,7 @@ label.columns<-c("$\\Delta$ Assets",
                  "$\\Hazard Ratio",
                  "$\\Delta$ EBITDA")
 
-label.covariates<-c('$\\widehat{Cust}$')
+label.covariates<-c('$Exposure$','$Rule$','$Exposure$ \\times Rule$')
 
 #LaTeX
 lm.list <- lapply(formulas,felm, data=filter(Regression,Home==1))
@@ -1357,7 +1357,7 @@ stargazer(lm.list,
           omit.stat = c("f","ser","adj.rsq"),
           omit.table.layout =  "d",
           #Labels
-          title="IV - Second-order effects on firms' outcomes",
+          title="Ex-post effects on firms' outcomes",
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
@@ -1368,16 +1368,16 @@ stargazer(lm.list,
 Survival<-Regression%>%dplyr::filter(Home==1)%>%mutate(Delisted=ifelse(Ativa==1,0,1))
 
 # Average delisting rate is: 11%
-mean(Survival$Ativa,na.rm=TRUE)-1
+1-mean(Survival$Ativa,na.rm=TRUE)
 
-#Reduces the likelihood of delisting by -0.074 x 20 (avg effect)% = -0.018%. 0.018/0.11 =~ 13% more likely to be active
-R7<-felm(Delisted~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF,data=Survival)
+#Reduces the likelihood of delisting
+R7<-felm(Delisted~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,data=Survival)
 
 label.FE <- c(rep("$\\checkmark$",1))
 label.cluster <- c(rep("UF",1))
 label.dep.var <- c("Dependent Variable:")
 label.columns<-c("Survival")
-label.covariates<-c('$\\widehat{Cust}$')
+label.covariates<-c('$Exposure$','$Rule$','$Exposure \\times Rule$')
 
 #LaTeX
 out.path <- paste0(table_path,"R7.tex")
@@ -1414,10 +1414,10 @@ Dummy=Dummy%>%select(D_Deliberacao,D_Cancelamento,D_Incorporacao,D_Liquidacao)
 Survival<-cbind(Survival,Dummy)%>%filter(Ativa!=1)
 
 formulas<-c(
-  D_Deliberacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
-  D_Cancelamento~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
-  D_Incorporacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS,
-  D_Liquidacao~Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|(O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|UF+REG_ANS)
+  D_Deliberacao~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  D_Cancelamento~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  D_Incorporacao~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS,
+  D_Liquidacao~Q_SSM*Post+Post*(State_Perc+Share+Size)|as.factor(UF):as.factor(Year)|0|REG_ANS)
 
 #Apply Formulas
 formulas <- lapply(formulas, as.formula)
@@ -1432,7 +1432,7 @@ label.columns<-c("\\textit{Delisted}",
                  "\\textit{Incorporation}",
                  "\\textit{Liquidation}")
 
-label.covariates<-c('$\\widehat{Cust}$')
+label.covariates<-c('$Exposure$','$Rule$','$Exposure \\times Rule$')
 
 #LaTeX
 lm.list <- lapply(formulas,felm, data=Survival)
@@ -1446,11 +1446,11 @@ stargazer(R7,lm.list,
                            c("State-Year FE",rep("$\\checkmark$",5)),
                            c("Cluster",label.cluster)),
           #Omit
-          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share","Post"),
+          omit = c("Constant", "State_Perc","Size","Post:State_Perc","Share","Post:Size","Post:Share"),
           omit.stat = c("f","ser","adj.rsq"),
           omit.table.layout =  "d",
           #Labels
-          title="IV - Second-order effects on firms' outcomes - Delisting Motivations",
+          title="Second-order effects on firms' ex-post outcomes - Delisting Motivations",
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
@@ -1595,15 +1595,15 @@ Temp_Regression=Regression%>%
   mutate(LeadPrice=lead(Price,1))
 
 # Single Regression ####
-R1=felm(log(LeadPrice)~Post*(State_Perc+Share+Size)-Post|as.factor(UF):as.factor(Year)+REG_ANS+FAIXA_ETARIA|
-          (O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|
-          REG_ANS+UF+FAIXA_ETARIA,data=filter(Temp_Regression,Home==1))
+R1=felm(log(LeadPrice)~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)+FAIXA_ETARIA+REG_ANS|0|REG_ANS+UF+FAIXA_ETARIA,data=filter(Temp_Regression,Home==1))
 
 #Labels
 label.FE <- c(rep("$\\checkmark$",1))
 label.cluster <- c(rep("Firm + UF + Age Bracket",1))
 label.dep.var <- c("Dependent Variable:")
-label.covariates<-c('$\\widehat{Cust}$')
+label.covariates<-c('$Exposure \\times Rule$')
+label.dep.var <- c("Dependent Variable: log($Price_{i,a,t+1})")
+
 
 #LaTeX
 out.path <- paste0(table_path,"R11.tex")
@@ -1620,15 +1620,13 @@ stargazer(R1,
           omit.stat = c("f","ser","adj.rsq"),
           omit.table.layout =  "d",
           #Labels
-          title="IV - Pricing Regressions",
+          title="\\textit{Ex-Post} Pricing Outcomes",
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
 # Varying on age ####
 
-formula=as.formula(log(Price)~Post*(State_Perc+Share+Size)-Post|
-                     as.factor(UF):as.factor(Year)+REG_ANS|
-                     (O_State_Benef~Q_SSM*Post+Post*(State_Perc+Share+Size))|REG_ANS+UF)
+formula=as.formula(log(Price)~Q_SSM*Post+Post*(State_Perc+Share+Size)-Post-Q_SSM|as.factor(UF):as.factor(Year)+REG_ANS|0|REG_ANS+UF,filter(Temp_Regression,Home==1))
 
 for (i in 1:10){
   assign(paste0('R',i),felm(formula,data=filter(Temp_Regression,FAIXA_ETARIA==unique(Temp_Regression$FAIXA_ETARIA)[i],Home==1)))
@@ -1638,7 +1636,7 @@ for (i in 1:10){
 #Labels
 label.FE <- c(rep("$\\checkmark$",10))
 label.cluster <- c(rep("Firm $\\times$ UF",10))
-label.dep.var <- c("Dependent Variable:")
+label.dep.var <- c("Dependent Variable: log($Price_{i,a,t+1})")
 label.columns<-unique(Temp_Regression$FAIXA_ETARIA)[1:10]
 
 label.covariates<-c('$\\widehat{Cust}$')
@@ -1660,7 +1658,7 @@ stargazer(lm.list,
           omit.stat = c("f","ser","adj.rsq"),
           omit.table.layout =  "d",
           #Labels
-          title="IV - Pricing Regressions, varying on Age brackets",
+          title="\\textit{Ex-post} Pricing Regressions, varying on Age brackets",
           covariate.labels=label.covariates,
           type='latex', out=out.path)
 
